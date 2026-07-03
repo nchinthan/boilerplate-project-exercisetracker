@@ -86,8 +86,8 @@ app.get('/api/users/:_id/logs', async (req, res) => {
 
     if (from || to) {
       filterObj.date = {};
-      if (from) filterObj.date.$gte = new Date(from.replace(/-/g, '\/'));
-      if (to) filterObj.date.$lte = new Date(to.replace(/-/g, '\/'));
+      if (from) filterObj.date.$gte = new Date(from);
+      if (to) filterObj.date.$lte = new Date(to);
     }
 
     let queryChain = Exercise.find(filterObj);
