@@ -82,7 +82,7 @@ app.get('/api/users/:_id/logs', async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    let filterObj = { user_id: userId };
+    let filterObj = { username: user.username };
 
     if (from || to) {
       filterObj.date = {};
