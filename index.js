@@ -8,7 +8,7 @@ const {User , Exercise} = require('./database');
 // --- MIDDLEWARE SETUP (Crucial to be at the top) ---
 app.use(cors())
 app.use(express.static('public'))
-app.use(bodyParser.urlencoded({ extended: true })); 
+app.use(bodyParser.urlencoded({ extended: false })); 
 app.use(express.json());
 
 
@@ -51,11 +51,7 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    let exerciseDate = date ? new Date(date.replace(/-/g, '\/')) : new Date();
-    
-    if (isNaN(exerciseDate.getTime())) {
-      exerciseDate = new Date();
-    }
+    const exerciseDate = date ? new Date(date) : new Date();
 
     const newExercise = new Exercise({
       user_id: userId,
@@ -69,7 +65,7 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
     res.json({
       username: user.username,
       description: newExercise.description,
-      duration: newExercise.duration,
+      duration: Number(newExercise.duration),
       date: newExercise.date.toDateString(),
       _id: user._id.toString() 
     });
