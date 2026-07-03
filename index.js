@@ -2,7 +2,6 @@ const express = require('express')
 const app = express()
 const cors = require('cors')
 require('dotenv').config()
-
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
@@ -25,32 +24,33 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 });
 
-
 // 1. POST /api/users - Create a new user
 app.post('/api/users', async (req, res) => {
   try {
     const newUser = new User({ username: req.body.username });
     const savedUser = await newUser.save();
+    
+    // Returns User Structure
     res.json({
       username: savedUser.username,
       _id: savedUser._id
     });
   } catch (err) {
-    res.status(500).json({ error: 'Server error creating user' });
+    res.status(500).json({ error: 'Failed to create user' });
   }
 });
 
-// 2. GET /api/users - Get an array of all users
+// 2. GET /api/users - Fetch array of all users
 app.get('/api/users', async (req, res) => {
   try {
     const users = await User.find({}).select('username _id');
     res.json(users);
   } catch (err) {
-    res.status(500).json({ error: 'Server error fetching users' });
+    res.status(500).json({ error: 'Failed to fetch users' });
   }
 });
 
-// 3. POST /api/users/:_id/exercises - Add an exercise to a user
+// 3. POST /api/users/:_id/exercises - Add an exercise
 app.post('/api/users/:_id/exercises', async (req, res) => {
   const userId = req.params._id;
   const { description, duration, date } = req.body;
@@ -59,8 +59,14 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Handle optional date string. If empty/missing, use current date
-    const exerciseDate = date ? new Date(date) : new Date();
+    // Handle incoming empty date parameters correctly. 
+    // If empty string or undefined, fallback immediately to the current date.
+    let exerciseDate = date ? new Date(date) : new Date();
+    
+    // If an invalid date string was provided, fall back to current date
+    if (isNaN(exerciseDate.getTime())) {
+      exerciseDate = new Date();
+    }
 
     const newExercise = new Exercise({
       user_id: userId,
@@ -71,65 +77,65 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
 
     await newExercise.save();
 
-    // The test requires an object combining user info and specific exercise info
-    // Date must be formatted as an English text representation string (e.g., "Mon Jan 01 1990")
+    // Returns Exercise Structure
     res.json({
-      _id: user._id,
       username: user.username,
       description: newExercise.description,
       duration: newExercise.duration,
-      date: newExercise.date.toDateString()
+      date: newExercise.date.toDateString(),
+      _id: user._id
     });
   } catch (err) {
-    res.status(500).json({ error: 'Server error adding exercise' });
+    res.status(500).json({ error: 'Failed to add exercise' });
   }
 });
 
-// 4. GET /api/users/:_id/logs - Get a user's exercise log with optional queries
+// 4. GET /api/users/:_id/logs - Retrieve a user's exercise log
 app.get('/api/users/:_id/logs', async (req, res) => {
   const userId = req.params._id;
-  const { from, to, limit } = req.query; // Optional parameters
+  const { from, to, limit } = req.query;
 
   try {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Build the query object for exercises
-    let queryObj = { user_id: userId };
+    // Construct base query object filtered by the user ID
+    let filterObj = { user_id: userId };
 
+    // Check for optional "from" and "to" date filters
     if (from || to) {
-      queryObj.date = {};
-      if (from) queryObj.date.$gte = new Date(from);
-      if (to) queryObj.date.$lte = new Date(to);
+      filterObj.date = {};
+      if (from) filterObj.date.$gte = new Date(from);
+      if (to) filterObj.date.$lte = new Date(to);
     }
 
-    // Prepare the database query
-    let exerciseQuery = Exercise.find(queryObj);
+    // Prepare execution chain
+    let queryChain = Exercise.find(filterObj);
 
     if (limit) {
-      exerciseQuery = exerciseQuery.limit(parseInt(limit));
+      queryChain = queryChain.limit(parseInt(limit));
     }
 
-    const exercises = await exerciseQuery.exec();
+    const exercises = await queryChain.exec();
 
-    // Map logs array into the exact string formatting expected by FCC tests
-    const log = exercises.map(ex => ({
+    // Format array elements using .toDateString()
+    const logArray = exercises.map(ex => ({
       description: ex.description,
       duration: ex.duration,
       date: ex.date.toDateString()
     }));
 
+    // Returns Log Structure
     res.json({
-      _id: user._id,
       username: user.username,
-      count: log.length, // Include the number of logs returned
-      log: log
+      count: logArray.length,
+      _id: user._id,
+      log: logArray
     });
   } catch (err) {
-    res.status(500).json({ error: 'Server error fetching logs' });
+    res.status(500).json({ error: 'Failed to retrieve exercise logs' });
   }
 });
-
 
 const listener = app.listen(process.env.PORT || 3000, () => {
   console.log('Your app is listening on port ' + listener.address().port)
