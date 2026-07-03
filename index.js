@@ -1,32 +1,17 @@
 const express = require('express')
 const app = express()
 const cors = require('cors')
+const bodyParser = require('body-parser')
 require('dotenv').config()
-const mongoose = require('mongoose');
-
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
-
-const userSchema = new mongoose.Schema({
-  username: { type: String, required: true }
-});
-
-const exerciseSchema = new mongoose.Schema({
-  user_id: { type: String, required: true },
-  description: { type: String, required: true },
-  duration: { type: Number, required: true },
-  date: { type: Date, required: true }
-});
-
-const User = mongoose.model('User', userSchema);
-const Exercise = mongoose.model('Exercise', exerciseSchema);
+const {User , Exercise} = require('./database');
 
 // --- MIDDLEWARE SETUP (Crucial to be at the top) ---
 app.use(cors())
 app.use(express.static('public'))
-app.use(express.urlencoded({ extended: true })); 
-app.use(express.json());                         
+app.use(bodyParser.urlencoded({ extended: true })); 
+app.use(express.json());
+
+
 
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
